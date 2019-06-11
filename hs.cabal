@@ -114,7 +114,9 @@ executable hs
   build-depends:
     hs,
     optparse-applicative,
+    text,
     typed-process,
+    unix,
 
   hs-source-dirs:
     app
