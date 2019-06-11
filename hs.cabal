@@ -1,15 +1,15 @@
 cabal-version: 2.4
 
 author:       Mitchell Rosen
-bug-reports:  https://github.com/mitchellwrosen/pkgname/issues
+bug-reports:  https://github.com/mitchellwrosen/hs/issues
 category:     Data
 copyright:    (c) 2019, Mitchell Rosen
 description:  Description
-homepage:     https://github.com/mitchellwrosen/pkgname
+homepage:     https://github.com/mitchellwrosen/hs
 license-file: LICENSE
 license:      BSD-3-Clause
 maintainer:   Mitchell Rosen <mitchellwrosen@gmail.com>
-name:         pkgname
+name:         hs
 synopsis:     Synopsis
 version:      0
 
@@ -26,7 +26,7 @@ extra-source-files:
 
 source-repository head
   type: git
-  location: git://github.com/mitchellwrosen/pkgname.git
+  location: git://github.com/mitchellwrosen/hs.git
 
 common common
   build-depends:
@@ -89,6 +89,10 @@ common common
     ghc-options:
       -Wpartial-fields
 
+  mixins:
+    base hiding (Prelude),
+    base (Prelude as BasePrelude)
+
 library
   import:
     common
@@ -96,39 +100,24 @@ library
   build-depends:
 
   exposed-modules:
+    Prelude
 
   hs-source-dirs:
     src
 
   other-modules:
 
-executable pkgname
+executable hs
   import:
     common,
 
   build-depends:
-    pkgname,
+    hs,
+    optparse-applicative,
+    typed-process,
 
   hs-source-dirs:
     app
 
   main-is:
     Main.hs
-
-test-suite tests
-  import:
-    common,
-
-  build-depends:
-    hedgehog,
-    tasty,
-    tasty-hedgehog,
-
-  hs-source-dirs:
-    test
-
-  main-is:
-    Main.hs
-
-  type:
-    exitcode-stdio-1.0
