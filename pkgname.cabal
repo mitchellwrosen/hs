@@ -1,0 +1,134 @@
+cabal-version: 2.4
+
+author:       Mitchell Rosen
+bug-reports:  https://github.com/mitchellwrosen/pkgname/issues
+category:     Data
+copyright:    (c) 2019, Mitchell Rosen
+description:  Description
+homepage:     https://github.com/mitchellwrosen/pkgname
+license-file: LICENSE
+license:      BSD-3-Clause
+maintainer:   Mitchell Rosen <mitchellwrosen@gmail.com>
+name:         pkgname
+synopsis:     Synopsis
+version:      0
+
+tested-with:
+    GHC == 8.0.2
+  , GHC == 8.2.2
+  , GHC == 8.4.4
+  , GHC == 8.6.5
+
+extra-source-files:
+  -- .travis.yml
+  CHANGELOG.md
+  README.md
+
+source-repository head
+  type: git
+  location: git://github.com/mitchellwrosen/pkgname.git
+
+common common
+  build-depends:
+    base,
+
+  default-extensions:
+    BangPatterns
+    ConstraintKinds
+    DataKinds
+    DefaultSignatures
+    DeriveAnyClass
+    DeriveFunctor
+    DeriveGeneric
+    DerivingStrategies
+    DuplicateRecordFields
+    ExistentialQuantification
+    FlexibleContexts
+    FlexibleInstances
+    GADTs
+    GeneralizedNewtypeDeriving
+    InstanceSigs
+    KindSignatures
+    LambdaCase
+    MagicHash
+    MultiParamTypeClasses
+    NamedFieldPuns
+    OverloadedLabels
+    OverloadedStrings
+    PatternSynonyms
+    RankNTypes
+    RecordWildCards
+    ScopedTypeVariables
+    StandaloneDeriving
+    StrictData
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeOperators
+    UnicodeSyntax
+    ViewPatterns
+
+  default-language:
+    Haskell2010
+
+  ghc-options:
+    -fprint-expanded-synonyms
+    -fprint-explicit-foralls
+    -fprint-explicit-kinds
+    -fprint-unicode-syntax
+    -Wall
+    -Wcompat
+    -Widentities
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wmissing-local-signatures
+    -Wnoncanonical-monad-instances
+    -Wnoncanonical-monadfail-instances
+    -Wredundant-constraints
+  if impl(ghc >= 8.4)
+    ghc-options:
+      -Wpartial-fields
+
+library
+  import:
+    common
+
+  build-depends:
+
+  exposed-modules:
+
+  hs-source-dirs:
+    src
+
+  other-modules:
+
+executable pkgname
+  import:
+    common,
+
+  build-depends:
+    pkgname,
+
+  hs-source-dirs:
+    app
+
+  main-is:
+    Main.hs
+
+test-suite tests
+  import:
+    common,
+
+  build-depends:
+    hedgehog,
+    tasty,
+    tasty-hedgehog,
+
+  hs-source-dirs:
+    test
+
+  main-is:
+    Main.hs
+
+  type:
+    exitcode-stdio-1.0
