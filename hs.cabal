@@ -112,11 +112,18 @@ executable hs
     common,
 
   build-depends:
+    async,
+    concurrent-output,
     hs,
+    megaparsec,
     optparse-applicative,
+    stm,
     text,
     typed-process,
     unix,
+
+  ghc-options:
+    -threaded "-with-rtsopts=-N"
 
   hs-source-dirs:
     app
