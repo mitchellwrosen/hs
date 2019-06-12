@@ -1,0 +1,4 @@
+#!/bin/sh
+
+cabal v2-build
+cp $(cabal-plan list-bin hs:exe:hs) ~/.local/bin

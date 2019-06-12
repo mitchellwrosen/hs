@@ -4,6 +4,7 @@ module Prelude
 
 import BasePrelude            as X
 import Control.Applicative    as X
+import Control.Category       as X ((>>>))
 import Control.Monad          as X
 import Control.Monad.IO.Class as X
 import Data.Foldable          as X

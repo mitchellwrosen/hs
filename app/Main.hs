@@ -1,28 +1,39 @@
 module Main where
 
 import Hs.Cabal.Component (Component(..))
-import Hs.Cabal.Output    (Output(..), parseOutput)
-import Hs.Cabal.Package   (Package(..))
+import Hs.Cabal.Output (Output(..), parseOutput)
+import Hs.Cabal.Package (Package(..))
+import Hs.Main.Build.Render
 
-import Control.Exception
+import Control.Concurrent
 import Control.Concurrent.Async
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TMQueue
+import Control.Effect
+import Control.Exception
+import Control.Monad.Fail
 import Control.Monad.Managed
-import Data.Text               (Text)
-import Data.Text.ANSI
-import Data.Text.Lazy.Encoding (decodeUtf8)
+import Control.Monad.Reader
+import Control.Monad.State.Strict
+import Data.HashMap.Strict (HashMap)
+import Data.HashSet (HashSet)
+import Data.List (partition, sortOn)
+import Data.Ord (Down(..))
+import Data.Text (Text)
+-- import Data.Text.ANSI
 import GHC.Clock
 import Options.Applicative
-import System.Environment
 import System.IO
 import System.Console.Concurrent
 import System.Console.Regions
-import System.Posix.Process    (executeFile)
+-- import System.Posix.Process (executeFile)
 import System.Process.Typed
 
-import qualified Data.Text.IO         as Text
-import qualified Data.Text.Lazy       as Text.Lazy
+import qualified Data.Text    as Text
+import qualified Data.Text.IO as Text
+-- import qualified Data.Text.Lazy as Text.Lazy
+import qualified Data.HashMap.Strict as HashMap
+import qualified Data.HashSet as HashSet
 
 
 main :: IO ()
@@ -70,7 +81,7 @@ buildParser =
           managed (withProcess (shell cmd & setStdout createPipe))
 
         renderAsync :: Async () <-
-          managed (withAsync (render outputQueue))
+          managed (withAsync (runM (runRender (render outputQueue))))
 
         liftIO $ (`fix` (getStdout process)) $ \loop h ->
           hIsEOF h >>= \case
@@ -115,101 +126,107 @@ buildParser =
         cmd =
           "cabal v2-build -O" ++ (if optimize then "1" else "0")
 
-render :: TMQueue (Word64, Text) -> IO ()
+render ::
+     ( Carrier sig m
+     , Member RenderEff sig
+     , MonadIO m
+     )
+  => TMQueue (Word64, Text)
+  -> m ()
 render outputQueue =
-  (`fix` DoingNothing) $ \loop cabalState ->
-    join . atomically $
-      tryReadTMQueue outputQueue >>= \case
-        Nothing ->
-          pure (pure ())
+  join . liftIO . atomically $
+    tryReadTMQueue outputQueue >>= \case
+      Nothing ->
+        pure (pure ())
 
-        Just Nothing ->
-          retry
+      Just Nothing ->
+        retry
 
-        Just (Just (_time, line)) -> pure $ do
-          -- Text.putStrLn $ "[DEBUG] " <> line
+      Just (Just (time, line)) -> pure $ do
+        case parseOutput line of
+          Nothing ->
+            liftIO (outputConcurrent ("??? " <> line <> "\n"))
 
-          case parseOutput line of
-            Nothing -> do
-              outputConcurrent ("??? " <> line <> "\n")
-              loop cabalState
+          Just (Building component) ->
+            liftIO (outputConcurrent (show (Building component) <> "\n"))
 
-            Just (Building component) -> do
-              loop (BuildingComponent component)
+          Just BuildProfile ->
+            pure ()
 
-            Just BuildProfile ->
-              loop cabalState
+          Just (Compiling _ _ name) ->
+            liftIO (outputConcurrent ("  " <> name <> "\n"))
 
-            Just (Compiling _ _ name) -> do
-              outputConcurrent ("  " <> name <> "\n")
-              loop cabalState
+          Just (Configuring component) ->
+            liftIO (outputConcurrent (show (Configuring component) <> "\n"))
 
-            Just (Configuring component) -> do
-              outputConcurrent (renderComponent component <> "\n")
-              loop (ConfiguringComponent component)
+          Just (DepBuilding _dep) ->
+            pure ()
 
-            Just (DepBuilding _component) ->
-              loop cabalState
+          Just (DepCompleted dep) ->
+            renderCompletedDependency dep time
 
-            Just (DepCompleted _component) ->
-              loop cabalState
+          Just (DepDownloaded _dep) ->
+            pure ()
 
-            Just (DepDownloaded _component) ->
-              loop cabalState
+          Just (DepDownloading dep) ->
+            renderDownloadingDependency dep
 
-            Just (DepDownloading _component) ->
-              loop cabalState
+          Just (DepInstalling _dep) ->
+            pure ()
 
-            Just (DepInstalling _component) ->
-              loop cabalState
+          Just (DepStarting dep) ->
+            renderBuildingDependency dep time
 
-            Just (DepStarting (Left package)) -> do
-              outputConcurrent (renderPackage package <> "\n")
-              loop cabalState
+          Just (Linking _binary) ->
+            pure ()
 
-            Just (DepStarting (Right component)) -> do
-              outputConcurrent (renderComponent component <> "\n")
-              loop cabalState
+          Just (Preprocessing component) ->
+            liftIO (outputConcurrent (show (Preprocessing component) <> "\n"))
+            -- component' <- rGetComponent
+            -- when (component' /= Just component)
+            --   (liftIO (outputConcurrent (renderComponent component <> "\n")))
+            -- rSetComponentState (PreprocessingComponent component)
 
-            Just (Linking _binary) ->
-              loop cabalState
+          Just ResolvingDependencies ->
+            pure ()
 
-            Just (Preprocessing component) -> do
-              when (currentComponent cabalState /= Just component)
-                (outputConcurrent (renderComponent component <> "\n"))
-              loop (PreprocessingComponent component)
+          Just UpToDate ->
+            pure ()
 
-            Just ResolvingDependencies ->
-              loop cabalState
+        render outputQueue
 
-            Just UpToDate ->
-              loop cabalState
 
-renderComponent :: Component -> Text
-renderComponent = \case
-  Executable package exeName ->
-    renderPackage package <> blue " executable " <> brightWhite exeName
+-- blue = id
+-- brightWhite = id
+-- brightBlack = id
 
-  Library package@(Package pkgName _) name ->
-    renderPackage package <>
-      (if name /= pkgName then blue " library  " <> brightWhite name else mempty)
+-- renderComponent :: Component -> Text
+-- renderComponent = \case
+--   Executable package exeName ->
+--     renderPackage package <> blue " executable " <> brightWhite exeName
 
-  TestSuite package exeName ->
-    renderPackage package <> blue " test suite " <> brightWhite exeName
+--   Library package@(Package pkgName _) name ->
+--     renderPackage package <>
+--       (if name /= pkgName then blue " library  " <> brightWhite name else mempty)
 
-renderPackage :: Package -> Text
-renderPackage (Package name ver) =
-  brightWhite name <> " " <> brightBlack ver
+--   TestSuite package exeName ->
+--     renderPackage package <> blue " test suite " <> brightWhite exeName
 
-data CabalState
-  = DoingNothing
-  | ConfiguringComponent Component
-  | PreprocessingComponent Component
-  | BuildingComponent Component
+-- renderDependency :: Either Package Component -> Text
+-- renderDependency =
+--   either renderPackage renderComponent
 
-currentComponent :: CabalState -> Maybe Component
-currentComponent = \case
-  DoingNothing -> Nothing
-  ConfiguringComponent component -> Just component
-  PreprocessingComponent component -> Just component
-  BuildingComponent component -> Just component
+-- renderPackage :: Package -> Text
+-- renderPackage (Package name ver) =
+--   brightWhite name <> " " <> brightBlack ver
+
+-- data CabalState
+--   = ConfiguringComponent Component
+--   | PreprocessingComponent Component
+--   | BuildingComponent Component
+
+-- data DepStatus
+--   = DepIsDownloading
+--   | DepIsBuilding Word64
+--   | DepIsCompleted Double
+--   deriving stock (Show)

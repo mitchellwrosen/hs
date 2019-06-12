@@ -98,13 +98,21 @@ library
     common
 
   build-depends:
+    ansi-terminal,
+    concurrent-output,
+    containers,
+    fused-effects,
+    hashable,
     megaparsec,
+    stm,
     text,
+    unordered-containers,
 
   exposed-modules:
     Hs.Cabal.Component
     Hs.Cabal.Output
     Hs.Cabal.Package
+    Hs.Main.Build.Render
     Prelude
 
   hs-source-dirs:
@@ -119,15 +127,17 @@ executable hs
   build-depends:
     async,
     concurrent-output,
+    fused-effects,
     hs,
     managed,
+    mtl,
     optparse-applicative,
     stm,
     stm-chans,
     text,
-    text-ansi,
     typed-process,
     unix,
+    unordered-containers,
 
   ghc-options:
     -threaded "-with-rtsopts=-N"
