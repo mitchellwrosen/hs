@@ -98,8 +98,13 @@ library
     common
 
   build-depends:
+    megaparsec,
+    text,
 
   exposed-modules:
+    Hs.Cabal.Component
+    Hs.Cabal.Output
+    Hs.Cabal.Package
     Prelude
 
   hs-source-dirs:
@@ -115,10 +120,12 @@ executable hs
     async,
     concurrent-output,
     hs,
-    megaparsec,
+    managed,
     optparse-applicative,
     stm,
+    stm-chans,
     text,
+    text-ansi,
     typed-process,
     unix,
 
