@@ -25,7 +25,12 @@ import qualified Data.Text.IO as Text
 main :: IO ()
 main = do
   displayConsoleRegions $
-    join (customExecParser parserPrefs (info parser (progDesc description)))
+    join
+      (customExecParser
+        parserPrefs
+        (info
+          (helper <*> parser)
+          (progDesc description)))
 
   where
     description :: [Char]

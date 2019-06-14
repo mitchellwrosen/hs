@@ -1,4 +1,5 @@
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Hs.Main.Build.Render
   ( RenderEff
@@ -19,6 +20,7 @@ import Hs.Cabal.Package (Package(..))
 import Control.Concurrent.STM
 import Control.Effect
 import Control.Effect.Carrier
+import Control.Effect.Lift
 import Control.Effect.Reader
 import Control.Effect.State
 import Control.Effect.Sum
@@ -166,16 +168,16 @@ renderStderr line =
 newtype RenderCarrier m a
   = RenderCarrier
   { unRenderCarrier ::
-       ReaderC LocalsConsoleRegion
-      (ReaderC DepsConsoleRegion
-      (ReaderC (TVar (Set (Double, Dependency)))
+       ReaderC (TVar (Set (Double, Dependency)))
+      (StateC (Maybe LocalsConsoleRegion)
+      (StateC (Maybe DepsConsoleRegion)
       (StateC (Maybe Component)
       (StateC (HashMap Component ConsoleRegion)
       (StateC (HashMap Dependency ConsoleRegion)
       (StateC (HashMap Dependency Word64) m)))))) a
   } deriving newtype (Applicative, Functor, Monad, MonadIO)
 
-instance (Carrier sig m, Effect sig, MonadIO m)
+instance (Carrier sig m, Effect sig, LiftRegion m, MonadIO m)
       => Carrier (RenderEff :+: sig) (RenderCarrier m) where
   eff ::
        (RenderEff :+: sig) (RenderCarrier m) (RenderCarrier m a)
@@ -269,12 +271,6 @@ instance (Carrier sig m, Effect sig, MonadIO m)
 
     L (RenderDownloadingDependency dep next) ->
       RenderCarrier $ do
-        -- do
-        --   mlastComponent :: Maybe Component <- get
-        --   for_ mlastComponent $ \lastComponent -> do
-        --     regions <- get
-        --     for_ (HashMap.lookup lastComponent regions) $ \region ->
-        --       liftIO (setConsoleRegion region (pprComponent lastComponent))
         renderNewDependency dep
         unRenderCarrier next
 
@@ -298,39 +294,64 @@ instance (Carrier sig m, Effect sig, MonadIO m)
 
 renderNewComponent ::
      ( Carrier sig m
-     , Member (Reader LocalsConsoleRegion) sig
      , Member (State (Maybe Component)) sig
+     , Member (State (Maybe LocalsConsoleRegion)) sig
      , Member (State (HashMap Component ConsoleRegion)) sig
-     , MonadIO m
+     , LiftRegion m
      )
   => Component
   -> m ()
 renderNewComponent component = do
-  -- do
-  --   mprevComponent :: Maybe Component <- get
-  --   for_ mprevComponent $ \prevComponent -> do
-  --     mprevRegion <- gets (HashMap.lookup prevComponent)
-  --     for_ mprevRegion $ \prevRegion ->
-  --       liftIO (setConsoleRegion prevRegion (pprComponent prevComponent))
-
-  LocalsConsoleRegion localsRegion <- ask
-  region <- liftIO (openConsoleRegion (InLine localsRegion))
-  liftIO (setConsoleRegion region (pprComponent component <> "\n"))
+  renderCompletedComponent
+  localsRegion <-
+    get >>= \case
+      Nothing -> do
+        localsRegion <- liftRegion (openConsoleRegion Linear)
+        put (Just (LocalsConsoleRegion localsRegion))
+        pure localsRegion
+      Just (LocalsConsoleRegion localsRegion) ->
+        pure localsRegion
+  region <- liftRegion (openConsoleRegion (InLine localsRegion))
+  liftRegion (setConsoleRegion region (pprComponent component <> "\n"))
   put (Just component)
   modify (HashMap.insert component region)
 
+renderCompletedComponent ::
+     ( Carrier sig m
+     , Member (State (Maybe Component)) sig
+     , Member (State (HashMap Component ConsoleRegion)) sig
+     , LiftRegion m
+     )
+  => m ()
+renderCompletedComponent = do
+  mprevComponent :: Maybe Component <- get
+  for_ mprevComponent $ \prevComponent -> do
+    mprevRegion <- gets (HashMap.lookup prevComponent)
+    for_ mprevRegion $ \prevRegion ->
+      liftRegion (setConsoleRegion prevRegion (pprComponent prevComponent <> "\n"))
+
 renderNewDependency ::
      ( Carrier sig m
-     , Member (Reader DepsConsoleRegion) sig
+     , Member (State (Maybe Component)) sig
+     , Member (State (Maybe DepsConsoleRegion)) sig
+     , Member (State (HashMap Component ConsoleRegion)) sig
      , Member (State (HashMap Dependency ConsoleRegion)) sig
-     , MonadIO m
+     , LiftRegion m
      )
   => Dependency
   -> m ()
 renderNewDependency dep = do
-  DepsConsoleRegion depsRegion <- ask
-  region <- liftIO (openConsoleRegion (InLine depsRegion))
-  liftIO (setConsoleRegion region (pprDependency dep <> "\n"))
+  renderCompletedComponent
+  depsRegion <-
+    get >>= \case
+      Nothing -> do
+        depsRegion <- liftRegion (openConsoleRegion Linear)
+        put (Just (DepsConsoleRegion depsRegion))
+        pure depsRegion
+      Just (DepsConsoleRegion depsRegion) ->
+        pure depsRegion
+  region <- liftRegion (openConsoleRegion (InLine depsRegion))
+  liftRegion (setConsoleRegion region (pprDependency dep <> "\n"))
   modify (HashMap.insert dep region)
 
 pprDependency :: Dependency -> Text
@@ -393,16 +414,16 @@ runRender (RenderCarrier action) = do
     liftIO (newTVarIO Set.empty)
 
   doneDepsRegion :: ConsoleRegion <-
-    liftIO (openConsoleRegion Linear)
+    liftIO (newConsoleRegion Linear Text.empty)
 
-  depsRegion :: ConsoleRegion <-
-    liftIO (openConsoleRegion Linear)
-
-  localsRegion :: ConsoleRegion <-
-    liftIO (openConsoleRegion Linear)
-
-  liftIO $ setConsoleRegion doneDepsRegion $ do
+  liftIO . setConsoleRegion doneDepsRegion $ do
     done <- readTVar doneDepsVar
+
+    -- Only add the region when it has at least one elem.
+    when (Set.size done == 1) $ do
+      regions <- takeTMVar regionList
+      putTMVar regionList (doneDepsRegion : regions)
+
     done
       & Set.toDescList
       & map pprDoneDependency
@@ -411,9 +432,9 @@ runRender (RenderCarrier action) = do
 
   (regions, (mlastComponent, result)) <-
     action
-      & runReader (LocalsConsoleRegion localsRegion)
-      & runReader (DepsConsoleRegion depsRegion)
       & runReader doneDepsVar
+      & evalState Nothing
+      & evalState Nothing
       & runState Nothing
       & runState HashMap.empty
       & evalState HashMap.empty
@@ -446,3 +467,14 @@ blue, brightBlack, brightWhite :: Text -> Text
 
 -- reset :: Text
 -- reset = Text.pack (setSGRCode [])
+
+instance LiftRegion m => LiftRegion (ReaderC r m) where
+  liftRegion =
+    ReaderC . const . liftRegion
+
+instance (Functor m, LiftRegion m) => LiftRegion (StateC r m) where
+  liftRegion m =
+    StateC (\s -> (s,) <$> liftRegion m)
+
+instance LiftRegion (LiftC IO) where
+  liftRegion = LiftC . atomically
