@@ -29,6 +29,7 @@ import Data.Set (Set)
 import System.Console.ANSI
 import System.Console.Concurrent
 import System.Console.Regions
+import GHC.Conc
 
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Set as Set
@@ -413,22 +414,24 @@ runRender (RenderCarrier action) = do
   doneDepsVar :: TVar (Set (Double, Dependency)) <-
     liftIO (newTVarIO Set.empty)
 
-  doneDepsRegion :: ConsoleRegion <-
-    liftIO (newConsoleRegion Linear Text.empty)
+  -- doneDepsRegion :: ConsoleRegion <-
+  --   liftIO (newConsoleRegion Linear Text.empty)
 
-  liftIO . setConsoleRegion doneDepsRegion $ do
-    done <- readTVar doneDepsVar
+  -- liftIO . setConsoleRegion doneDepsRegion $ do
+  --   done <- readTVar doneDepsVar
+  --   unsafeIOToSTM (outputConcurrent (Text.pack (show done) <> "\n"))
 
-    -- Only add the region when it has at least one elem.
-    when (Set.size done == 1) $ do
-      regions <- takeTMVar regionList
-      putTMVar regionList (doneDepsRegion : regions)
+  --   -- Only add the region when it has at least one elem.
+  --   when (Set.size done == 1) $ do
+  --     unsafeIOToSTM (outputConcurrent ("Adding DONE DEPS\n" :: Text))
+  --     regions <- takeTMVar regionList
+  --     putTMVar regionList (doneDepsRegion : regions)
 
-    done
-      & Set.toDescList
-      & map pprDoneDependency
-      & Text.unlines
-      & pure
+  --   done
+  --     & Set.toDescList
+  --     & map pprDoneDependency
+  --     & Text.unlines
+  --     & pure
 
   (regions, (mlastComponent, result)) <-
     action

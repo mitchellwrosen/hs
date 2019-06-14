@@ -133,6 +133,7 @@ executable hs
     optparse-applicative,
     stm,
     stm-chans,
+    temporary,
     text,
     typed-process,
     -- unix,

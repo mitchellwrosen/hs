@@ -12,9 +12,10 @@ import Data.Text (Text)
 -- import Data.Text.ANSI
 import GHC.Clock
 import Options.Applicative
-import System.IO
-import System.Console.Concurrent
+-- import System.Console.Concurrent
 import System.Console.Regions
+import System.IO
+import System.IO.Temp (emptySystemTempFile)
 -- import System.Posix.Process (executeFile)
 import System.Process.Typed
 
@@ -54,6 +55,8 @@ parser =
     (fold
       [ command "build" (info buildParser (progDesc "Build"))
       , command "clean" (info cleanParser (progDesc "Clean"))
+      , command "dependency-graph"
+          (info dependencyGraphParser (progDesc "Dependency graph"))
       ])
 
 buildParser :: Parser (IO ())
@@ -149,6 +152,37 @@ cleanParser =
       managed (withProcess (shell "cabal v2-clean"))
 
     checkExitCode process
+
+dependencyGraphParser :: Parser (IO ())
+dependencyGraphParser =
+  pure . runManaged $ do
+    cabalPlanDotProcess :: Process () Handle () <-
+      managed
+        (withProcess
+          (shell "cabal-plan dot"
+            & setStdout createPipe))
+
+    tredProcess :: Process () Handle () <-
+      managed
+        (withProcess
+          (shell "tred"
+            & setStdin (useHandleClose (getStdout cabalPlanDotProcess))
+            & setStdout createPipe))
+
+    outfile :: FilePath <-
+      liftIO (emptySystemTempFile "dependency-graph.pdf")
+
+    dotProcess :: Process () () () <-
+      managed
+        (withProcess
+          (shell ("dot -Tpdf -o " ++ outfile)
+            & setStdin (useHandleClose (getStdout tredProcess))))
+
+    checkExitCode cabalPlanDotProcess
+    checkExitCode tredProcess
+    checkExitCode dotProcess
+
+    liftIO (putStrLn outfile)
 
 render ::
      ( Carrier sig m
