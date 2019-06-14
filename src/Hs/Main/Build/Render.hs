@@ -451,22 +451,20 @@ runRender (RenderCarrier action) = do
 -- Colors
 --------------------------------------------------------------------------------
 
-blue, brightBlack, brightWhite :: Text -> Text
-(blue, brightBlack, brightWhite) = (id, id, id)
--- blue :: Text -> Text
--- blue s =
---   Text.pack (setSGRCode [SetColor Foreground Dull Blue]) <> s <> reset
+blue :: Text -> Text
+blue s =
+  Text.pack (setSGRCode [SetColor Foreground Dull Blue]) <> s <> reset
 
--- brightBlack :: Text -> Text
--- brightBlack s =
---   Text.pack (setSGRCode [SetColor Foreground Vivid Black]) <> s <> reset
+brightBlack :: Text -> Text
+brightBlack s =
+  Text.pack (setSGRCode [SetColor Foreground Vivid Black]) <> s <> reset
 
--- brightWhite :: Text -> Text
--- brightWhite s =
---   Text.pack (setSGRCode [SetColor Foreground Vivid White]) <> s <> reset
+brightWhite :: Text -> Text
+brightWhite s =
+  Text.pack (setSGRCode [SetColor Foreground Vivid White]) <> s <> reset
 
--- reset :: Text
--- reset = Text.pack (setSGRCode [])
+reset :: Text
+reset = Text.pack (setSGRCode [Reset])
 
 instance LiftRegion m => LiftRegion (ReaderC r m) where
   liftRegion =

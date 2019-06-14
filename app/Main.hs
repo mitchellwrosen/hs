@@ -53,6 +53,7 @@ parser =
   hsubparser
     (fold
       [ command "build" (info buildParser (progDesc "Build"))
+      , command "clean" (info cleanParser (progDesc "Clean"))
       ])
 
 buildParser :: Parser (IO ())
@@ -140,6 +141,14 @@ buildParser =
             , "--ghc-options=-j"
             , "-O" ++ (if optimize then "1" else "0")
             ]
+
+cleanParser :: Parser (IO ())
+cleanParser =
+  pure . runManaged $ do
+    process :: Process () () () <-
+      managed (withProcess (shell "cabal v2-clean"))
+
+    checkExitCode process
 
 render ::
      ( Carrier sig m
