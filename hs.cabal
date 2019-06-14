@@ -130,14 +130,12 @@ executable hs
     fused-effects,
     hs,
     managed,
-    mtl,
     optparse-applicative,
     stm,
     stm-chans,
     text,
     typed-process,
-    unix,
-    unordered-containers,
+    -- unix,
 
   ghc-options:
     -threaded "-with-rtsopts=-N"

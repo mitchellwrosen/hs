@@ -1,24 +1,13 @@
 module Main where
 
-import Hs.Cabal.Component (Component(..))
 import Hs.Cabal.Output (Output(..), parseOutput)
-import Hs.Cabal.Package (Package(..))
 import Hs.Main.Build.Render
 
-import Control.Concurrent
 import Control.Concurrent.Async
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TMQueue
 import Control.Effect
-import Control.Exception
-import Control.Monad.Fail
 import Control.Monad.Managed
-import Control.Monad.Reader
-import Control.Monad.State.Strict
-import Data.HashMap.Strict (HashMap)
-import Data.HashSet (HashSet)
-import Data.List (partition, sortOn)
-import Data.Ord (Down(..))
 import Data.Text (Text)
 -- import Data.Text.ANSI
 import GHC.Clock
@@ -29,11 +18,8 @@ import System.Console.Regions
 -- import System.Posix.Process (executeFile)
 import System.Process.Typed
 
-import qualified Data.Text    as Text
 import qualified Data.Text.IO as Text
 -- import qualified Data.Text.Lazy as Text.Lazy
-import qualified Data.HashMap.Strict as HashMap
-import qualified Data.HashSet as HashSet
 
 
 main :: IO ()
@@ -73,28 +59,43 @@ buildParser =
     doBuild :: Bool -> IO ()
     doBuild optimize =
       runManaged $ do
-        outputQueue <-
+        outputQueue :: TMQueue (Either Text (Word64, Text)) <-
           liftIO newTMQueueIO
 
-
-        process <-
-          managed (withProcess (shell cmd & setStdout createPipe))
+        process :: Process () Handle Handle <-
+          managed
+            (withProcess
+              (shell cmd
+                & setStdout createPipe
+                & setStderr createPipe))
 
         renderAsync :: Async () <-
           managed (withAsync (runM (runRender (render outputQueue))))
+
+        stderrFeedAsync :: Async () <-
+          managed
+            (withAsync
+              ((`fix` (getStderr process)) $ \loop h ->
+                hIsEOF h >>= \case
+                  True ->
+                    pure ()
+
+                  False -> do
+                    line <- Text.hGetLine h
+                    atomically (writeTMQueue outputQueue (Left line))
+                    loop h))
 
         liftIO $ (`fix` (getStdout process)) $ \loop h ->
           hIsEOF h >>= \case
             True -> do
               atomically (closeTMQueue outputQueue)
+              wait stderrFeedAsync
               wait renderAsync
 
             False -> do
               line <- Text.hGetLine h
               time <- getMonotonicTimeNSec
-
-              atomically (writeTMQueue outputQueue (time, line))
-
+              atomically (writeTMQueue outputQueue (Right (time, line)))
               loop h
 
         checkExitCode process
@@ -124,14 +125,23 @@ buildParser =
       where
         cmd :: [Char]
         cmd =
-          "cabal v2-build -O" ++ (if optimize then "1" else "0")
+          unwords
+            [ "cabal"
+            , "v2-build"
+            , "all"
+            , "--enable-benchmarks"
+            , "--enable-tests"
+            , "--jobs"
+            , "--ghc-options=-j"
+            , "-O" ++ (if optimize then "1" else "0")
+            ]
 
 render ::
      ( Carrier sig m
      , Member RenderEff sig
      , MonadIO m
      )
-  => TMQueue (Word64, Text)
+  => TMQueue (Either Text (Word64, Text))
   -> m ()
 render outputQueue =
   join . liftIO . atomically $
@@ -142,22 +152,27 @@ render outputQueue =
       Just Nothing ->
         retry
 
-      Just (Just (time, line)) -> pure $ do
+      Just (Just (Left line)) -> pure $ do
+        renderStderr line
+        render outputQueue
+
+      Just (Just (Right (time, line))) -> pure $ do
         case parseOutput line of
           Nothing ->
-            liftIO (outputConcurrent ("??? " <> line <> "\n"))
+            pure ()
+            -- liftIO (outputConcurrent ("??? " <> line <> "\n"))
 
           Just (Building component) ->
-            liftIO (outputConcurrent (show (Building component) <> "\n"))
+            renderBuildingComponent component
 
           Just BuildProfile ->
             pure ()
 
-          Just (Compiling _ _ name) ->
-            liftIO (outputConcurrent ("  " <> name <> "\n"))
+          Just (Compiling n m name isBoot) ->
+            renderCompilingModule n m name isBoot
 
           Just (Configuring component) ->
-            liftIO (outputConcurrent (show (Configuring component) <> "\n"))
+            renderConfiguringComponent component
 
           Just (DepBuilding _dep) ->
             pure ()
@@ -181,11 +196,7 @@ render outputQueue =
             pure ()
 
           Just (Preprocessing component) ->
-            liftIO (outputConcurrent (show (Preprocessing component) <> "\n"))
-            -- component' <- rGetComponent
-            -- when (component' /= Just component)
-            --   (liftIO (outputConcurrent (renderComponent component <> "\n")))
-            -- rSetComponentState (PreprocessingComponent component)
+            renderPreprocessingComponent component
 
           Just ResolvingDependencies ->
             pure ()
@@ -194,39 +205,3 @@ render outputQueue =
             pure ()
 
         render outputQueue
-
-
--- blue = id
--- brightWhite = id
--- brightBlack = id
-
--- renderComponent :: Component -> Text
--- renderComponent = \case
---   Executable package exeName ->
---     renderPackage package <> blue " executable " <> brightWhite exeName
-
---   Library package@(Package pkgName _) name ->
---     renderPackage package <>
---       (if name /= pkgName then blue " library  " <> brightWhite name else mempty)
-
---   TestSuite package exeName ->
---     renderPackage package <> blue " test suite " <> brightWhite exeName
-
--- renderDependency :: Either Package Component -> Text
--- renderDependency =
---   either renderPackage renderComponent
-
--- renderPackage :: Package -> Text
--- renderPackage (Package name ver) =
---   brightWhite name <> " " <> brightBlack ver
-
--- data CabalState
---   = ConfiguringComponent Component
---   | PreprocessingComponent Component
---   | BuildingComponent Component
-
--- data DepStatus
---   = DepIsDownloading
---   | DepIsBuilding Word64
---   | DepIsCompleted Double
---   deriving stock (Show)

@@ -17,7 +17,9 @@ import qualified Data.Text as Text
 data Output
   = BuildProfile
   | Building Component
-  | Compiling Int Int Text -- [1 of 25] Compiling Foo
+    -- [1 of 25] Compiling Foo
+    -- [1 of 25] Compiling Foo[boot]
+  | Compiling Int Int Text Bool
   | Configuring Component
   | DepBuilding (Either Package Component)
   | DepCompleted (Either Package Component)
@@ -68,7 +70,10 @@ outputParser =
         _ <- string "Compiling "
         s <- takeWhile1P Nothing (not . isSpace)
         _ <- takeRest
-        pure (Compiling n m s)
+        pure $
+          case Text.stripSuffix "[boot]" s of
+            Nothing -> Compiling n m s False
+            Just s' -> Compiling n m s' True
 
     , do
         string "Completed" *> space
