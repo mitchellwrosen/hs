@@ -159,14 +159,7 @@ dependencyGraphParser =
     cabalPlanDotProcess :: Process () Handle () <-
       managed
         (withProcess
-          (shell "cabal-plan dot"
-            & setStdout createPipe))
-
-    tredProcess :: Process () Handle () <-
-      managed
-        (withProcess
-          (shell "tred"
-            & setStdin (useHandleClose (getStdout cabalPlanDotProcess))
+          (shell "cabal-plan dot --tred --tred-weights"
             & setStdout createPipe))
 
     outfile :: FilePath <-
@@ -176,10 +169,9 @@ dependencyGraphParser =
       managed
         (withProcess
           (shell ("dot -Tpdf -o " ++ outfile)
-            & setStdin (useHandleClose (getStdout tredProcess))))
+            & setStdin (useHandleClose (getStdout cabalPlanDotProcess))))
 
     checkExitCode cabalPlanDotProcess
-    checkExitCode tredProcess
     checkExitCode dotProcess
 
     liftIO (putStrLn outfile)
