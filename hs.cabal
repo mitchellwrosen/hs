@@ -103,16 +103,26 @@ library
     containers,
     fused-effects,
     hashable,
+    managed,
     megaparsec,
     stm,
+    stm-chans,
+    streaming,
     text,
+    typed-process,
+    unliftio,
+    unliftio-core,
     unordered-containers,
 
   exposed-modules:
+    Hs.Cabal.Build.Output
+    Hs.Cabal.Build.Spec
+    Hs.Cabal.Build.Stderr
+    Hs.Cabal.Build.Stdout
     Hs.Cabal.Component
-    Hs.Cabal.Output
     Hs.Cabal.Package
     Hs.Main.Build.Render
+    Hs.Streaming
     Prelude
 
   hs-source-dirs:
@@ -133,6 +143,7 @@ executable hs
     optparse-applicative,
     stm,
     stm-chans,
+    streaming,
     temporary,
     text,
     typed-process,

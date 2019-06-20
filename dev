@@ -1,0 +1,10 @@
+#!/bin/sh
+
+case "$1" in
+  "exe")
+    exec ghcid -c "cabal v2-repl hs:exe:hs" --restart hs.cabal
+    ;;
+  "lib")
+    exec ghcid -c "cabal v2-repl hs:lib:hs" --restart hs.cabal
+    ;;
+esac

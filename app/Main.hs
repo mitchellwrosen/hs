@@ -1,26 +1,27 @@
 module Main where
 
-import Hs.Cabal.Output (Output(..), parseOutput)
+import Hs.Cabal.Build.Spec
+import Hs.Cabal.Build.Stdout (CabalBuildStdout(..))
+import Hs.Cabal.Build.Stderr (CabalBuildStderr(..))
 import Hs.Main.Build.Render
 
-import Control.Concurrent.Async
-import Control.Concurrent.STM
-import Control.Concurrent.STM.TMQueue
 import Control.Effect
 import Control.Monad.Managed
 import Data.Text (Text)
 -- import Data.Text.ANSI
 import GHC.Clock
 import Options.Applicative
--- import System.Console.Concurrent
+import Streaming
+import System.Console.Concurrent
 import System.Console.Regions
 import System.IO
 import System.IO.Temp (emptySystemTempFile)
 -- import System.Posix.Process (executeFile)
 import System.Process.Typed
 
-import qualified Data.Text.IO as Text
 -- import qualified Data.Text.Lazy as Text.Lazy
+
+import qualified Streaming.Prelude as Streaming
 
 
 main :: IO ()
@@ -68,46 +69,9 @@ buildParser =
     doBuild :: Bool -> IO ()
     doBuild optimize =
       runManaged $ do
-        outputQueue :: TMQueue (Either Text (Word64, Text)) <-
-          liftIO newTMQueueIO
+        stream <- spawnCabalBuildProcess (CabalBuildSpec optimize)
 
-        process :: Process () Handle Handle <-
-          managed
-            (withProcess
-              (shell cmd
-                & setStdout createPipe
-                & setStderr createPipe))
-
-        renderAsync :: Async () <-
-          managed (withAsync (runM (runRender (render outputQueue))))
-
-        stderrFeedAsync :: Async () <-
-          managed
-            (withAsync
-              ((`fix` (getStderr process)) $ \loop h ->
-                hIsEOF h >>= \case
-                  True ->
-                    pure ()
-
-                  False -> do
-                    line <- Text.hGetLine h
-                    atomically (writeTMQueue outputQueue (Left line))
-                    loop h))
-
-        liftIO $ (`fix` (getStdout process)) $ \loop h ->
-          hIsEOF h >>= \case
-            True -> do
-              atomically (closeTMQueue outputQueue)
-              wait stderrFeedAsync
-              wait renderAsync
-
-            False -> do
-              line <- Text.hGetLine h
-              time <- getMonotonicTimeNSec
-              atomically (writeTMQueue outputQueue (Right (time, line)))
-              loop h
-
-        checkExitCode process
+        liftIO (runM (runRender (handleOutput stream)))
 
         {-
         output <- readProcessStdout_ (shell "cabal-plan list-bins")
@@ -130,20 +94,6 @@ buildParser =
             _ ->
               liftIO (throwIO (userError (show line)))
         -}
-
-      where
-        cmd :: [Char]
-        cmd =
-          unwords
-            [ "cabal"
-            , "v2-build"
-            , "all"
-            , "--enable-benchmarks"
-            , "--enable-tests"
-            , "--jobs"
-            , "--ghc-options=-j"
-            , "-O" ++ (if optimize then "1" else "0")
-            ]
 
 cleanParser :: Parser (IO ())
 cleanParser =
@@ -176,72 +126,73 @@ dependencyGraphParser =
 
     liftIO (putStrLn outfile)
 
-render ::
+handleOutput ::
      ( Carrier sig m
      , Member RenderEff sig
      , MonadIO m
      )
-  => TMQueue (Either Text (Word64, Text))
+  => Stream
+      (Of
+        (Either
+          (Either Text CabalBuildStderr)
+          (Either Text CabalBuildStdout)))
+      m
+      ()
   -> m ()
-render outputQueue =
-  join . liftIO . atomically $
-    tryReadTMQueue outputQueue >>= \case
-      Nothing ->
-        pure (pure ())
+handleOutput =
+  Streaming.mapM_ $ \case
+    Left (Left line) ->
+      renderStderr line
 
-      Just Nothing ->
-        retry
+    Left (Right RunCabalUpdate) ->
+      pure ()
 
-      Just (Just (Left line)) -> pure $ do
-        renderStderr line
-        render outputQueue
+    Left (Right WarningOldIndex) ->
+      liftIO (outputConcurrent ("WarningOldIndex\n" :: Text))
 
-      Just (Just (Right (time, line))) -> pure $ do
-        case parseOutput line of
-          Nothing ->
-            pure ()
-            -- liftIO (outputConcurrent ("??? " <> line <> "\n"))
+    Right (Left line) ->
+      liftIO (outputConcurrent ("??? " <> line <> "\n"))
 
-          Just (Building component) ->
-            renderBuildingComponent component
+    Right (Right (Building component)) ->
+      renderBuildingComponent component
 
-          Just BuildProfile ->
-            pure ()
+    Right (Right BuildProfile) ->
+      pure ()
 
-          Just (Compiling n m name isBoot) ->
-            renderCompilingModule n m name isBoot
+    Right (Right (Compiling n m name isBoot)) ->
+      renderCompilingModule n m name isBoot
 
-          Just (Configuring component) ->
-            renderConfiguringComponent component
+    Right (Right (Configuring component)) ->
+      renderConfiguringComponent component
 
-          Just (DepBuilding _dep) ->
-            pure ()
+    Right (Right (DepBuilding _dep)) ->
+      pure ()
 
-          Just (DepCompleted dep) ->
-            renderCompletedDependency dep time
+    Right (Right (DepCompleted dep)) -> do
+      time <- liftIO getMonotonicTimeNSec
+      renderCompletedDependency dep time
 
-          Just (DepDownloaded _dep) ->
-            pure ()
+    Right (Right (DepDownloaded _dep)) ->
+      pure ()
 
-          Just (DepDownloading dep) ->
-            renderDownloadingDependency dep
+    Right (Right (DepDownloading dep)) ->
+      renderDownloadingDependency dep
 
-          Just (DepInstalling _dep) ->
-            pure ()
+    Right (Right (DepInstalling _dep)) ->
+      pure ()
 
-          Just (DepStarting dep) ->
-            renderBuildingDependency dep time
+    Right (Right (DepStarting dep)) -> do
+      time <- liftIO getMonotonicTimeNSec
+      renderBuildingDependency dep time
 
-          Just (Linking _binary) ->
-            pure ()
+    Right (Right (Linking _binary)) ->
+      pure ()
 
-          Just (Preprocessing component) ->
-            renderPreprocessingComponent component
+    Right (Right (Preprocessing component)) ->
+      renderPreprocessingComponent component
 
-          Just ResolvingDependencies ->
-            pure ()
+    Right (Right ResolvingDependencies) ->
+      pure ()
 
-          Just UpToDate ->
-            pure ()
-
-        render outputQueue
+    Right (Right UpToDate) ->
+      pure ()

@@ -1,6 +1,6 @@
-module Hs.Cabal.Output
-  ( Output(..)
-  , parseOutput
+module Hs.Cabal.Build.Stdout
+  ( CabalBuildStdout(..)
+  , parseCabalBuildStdout
   ) where
 
 import Hs.Cabal.Component
@@ -14,7 +14,7 @@ import Text.Megaparsec.Char
 import qualified Data.Text as Text
 
 
-data Output
+data CabalBuildStdout
   = BuildProfile
   | Building Component
     -- [1 of 25] Compiling Foo
@@ -28,18 +28,19 @@ data Output
   | DepInstalling (Either Package Component)
   | DepStarting (Either Package Component)
   | Linking Text
+    -- Preprocessing executable 'hs' for hs-0..
   | Preprocessing Component
   | ResolvingDependencies
+    -- Up to date
   | UpToDate
   deriving stock (Show)
 
-parseOutput :: Text -> Maybe Output
-parseOutput =
-  parseMaybe outputParser
+parseCabalBuildStdout :: Text -> Maybe CabalBuildStdout
+parseCabalBuildStdout =
+  parseMaybe parser
 
--- Preprocessing executable 'hs' for hs-0..
-outputParser :: Parsec () Text Output
-outputParser =
+parser :: Parsec () Text CabalBuildStdout
+parser =
   asum
     [ do
         _ <- string "Build"
@@ -106,7 +107,9 @@ outputParser =
         component <- componentParser
         pure (Preprocessing component)
 
-    , ResolvingDependencies <$ string "Resolving dependencies..."
+    , do
+        _ <- string "Resolving dependencies..."
+        pure ResolvingDependencies
 
     , do
         string "Starting" *> space
@@ -180,7 +183,7 @@ intParser = do
 
 packageParser :: Parsec () Text Package
 packageParser = do
-  s <- takeWhile1P Nothing(not . isSpace)
+  s <- takeWhile1P Nothing (not . isSpace)
   space
 
   case Text.breakOnEnd "-" s of
