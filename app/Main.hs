@@ -3,6 +3,7 @@ module Main where
 import Hs.Cabal.Build.Spec
 import Hs.Cabal.Build.Stdout (CabalBuildStdout(..))
 import Hs.Cabal.Build.Stderr (CabalBuildStderr(..))
+import Hs.Eff.Register
 import Hs.Main.Build.Render
 
 import Control.Effect
@@ -14,6 +15,7 @@ import Options.Applicative
 import Streaming
 import System.Console.Concurrent
 import System.Console.Regions
+import System.Exit
 import System.IO
 import System.IO.Temp (emptySystemTempFile)
 -- import System.Posix.Process (executeFile)
@@ -25,7 +27,7 @@ import qualified Streaming.Prelude as Streaming
 
 
 main :: IO ()
-main = do
+main =
   displayConsoleRegions $
     join
       (customExecParser
@@ -67,11 +69,14 @@ buildParser =
 
   where
     doBuild :: Bool -> IO ()
-    doBuild optimize =
-      runManaged $ do
-        stream <- spawnCabalBuildProcess (CabalBuildSpec optimize)
+    doBuild optimize = do
+      exitCode :: ExitCode <-
+        handleOutput (spawnCabalBuildProcess (CabalBuildSpec optimize))
+          & runRender
+          & runRegister
+          & runM
 
-        liftIO (runM (runRender (handleOutput stream)))
+      pure ()
 
         {-
         output <- readProcessStdout_ (shell "cabal-plan list-bins")
@@ -137,8 +142,8 @@ handleOutput ::
           (Either Text CabalBuildStderr)
           (Either Text CabalBuildStdout)))
       m
-      ()
-  -> m ()
+      r
+  -> m r
 handleOutput =
   Streaming.mapM_ $ \case
     Left (Left line) ->

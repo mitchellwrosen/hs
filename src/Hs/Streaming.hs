@@ -2,12 +2,19 @@ module Hs.Streaming
   ( unixProcessStream
   ) where
 
+import Hs.Eff.Register
+
 import Control.Concurrent.STM
+import Control.Effect
+-- import Control.Monad.IO.Unlift
 import Streaming
 import Streaming.Internal (Stream(..))
 import Streaming.Prelude (yield)
+import System.Exit (ExitCode)
 import System.IO
+import System.Process.Typed
 import UnliftIO.Async
+-- import UnliftIO.Exception (bracket)
 
 import qualified Data.Text.IO as Text
 import qualified Streaming.Prelude as Streaming
@@ -39,21 +46,37 @@ streamToTQueue queue =
   Streaming.mapM_ (liftIO . atomically . writeTQueue queue)
 
 unixProcessStream
-  :: MonadIO m
-  => Handle
-  -> Handle
-  -> Stream (Of (Either Text Text)) m ()
-unixProcessStream stdoutHandle stderrHandle = do
+  :: forall m sig.
+     ( Carrier sig m
+     , Member RegisterEffect sig
+     , MonadIO m
+     )
+  => ProcessConfig () () ()
+  -> Stream (Of (Either Text Text)) m ExitCode
+unixProcessStream processConfig = do
+  process :: Process () Handle Handle <-
+    lift
+      (register
+        (startProcess
+          (processConfig
+            & setStdout createPipe
+            & setStderr createPipe))
+        stopProcess)
+
   queue :: TQueue (Either Text Text) <-
     liftIO newTQueueIO
 
   stdoutAsync :: Async () <-
     liftIO . async $
-      streamToTQueue queue (Streaming.map Right (handleToLines stdoutHandle))
+      streamToTQueue
+        queue
+        (Streaming.map Right (handleToLines (getStdout process)))
 
   stderrAsync :: Async () <-
     liftIO . async $
-      streamToTQueue queue (Streaming.map Left (handleToLines stderrHandle))
+      streamToTQueue
+        queue
+        (Streaming.map Left (handleToLines (getStderr process)))
 
   fix $ \loop ->
     join . liftIO . atomically $
@@ -66,4 +89,4 @@ unixProcessStream stdoutHandle stderrHandle = do
       do
         waitSTM stdoutAsync
         waitSTM stderrAsync
-        pure (pure ())
+        pure (waitExitCode process)

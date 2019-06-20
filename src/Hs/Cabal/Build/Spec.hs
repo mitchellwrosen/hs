@@ -5,11 +5,12 @@ module Hs.Cabal.Build.Spec
 
 import Hs.Cabal.Build.Stderr
 import Hs.Cabal.Build.Stdout
+import Hs.Eff.Register
 import Hs.Streaming
 
-import Control.Monad.Managed
+import Control.Effect
 import Streaming
-import System.IO
+import System.Exit
 import System.Process.Typed
 
 import qualified Streaming.Prelude as Streaming
@@ -21,28 +22,22 @@ data CabalBuildSpec
   }
 
 spawnCabalBuildProcess
-  :: MonadIO m
+  :: ( Carrier sig m
+     , Member RegisterEffect sig
+     , MonadIO m
+     )
   => CabalBuildSpec
-  -> Managed
-      (Stream
-        (Of
-          (Either
-            (Either Text CabalBuildStderr)
-            (Either Text CabalBuildStdout)))
-        m
-        ())
-spawnCabalBuildProcess spec = do
-  process :: Process () Handle Handle <-
-    managed
-      (withProcess
-        (shell (renderCabalBuildSpec spec)
-          & setStdout createPipe
-          & setStderr createPipe))
-
-  pure $ do
-    unixProcessStream (getStdout process) (getStderr process)
-      & Streaming.map (bimap parseErr parseOut)
-    liftIO (checkExitCode process)
+  -> Stream
+      (Of
+        (Either
+          (Either Text CabalBuildStderr)
+          (Either Text CabalBuildStdout)))
+      m
+      ExitCode
+spawnCabalBuildProcess spec =
+  Streaming.map
+    (bimap parseErr parseOut)
+    (unixProcessStream (shell (renderCabalBuildSpec spec)))
 
   where
     parseErr :: Text -> Either Text CabalBuildStderr

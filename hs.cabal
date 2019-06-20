@@ -105,22 +105,24 @@ library
     hashable,
     managed,
     megaparsec,
+    resourcet,
     stm,
     stm-chans,
     streaming,
     text,
+    transformers,
     typed-process,
     unliftio,
     unliftio-core,
     unordered-containers,
 
   exposed-modules:
-    Hs.Cabal.Build.Output
     Hs.Cabal.Build.Spec
     Hs.Cabal.Build.Stderr
     Hs.Cabal.Build.Stdout
     Hs.Cabal.Component
     Hs.Cabal.Package
+    Hs.Eff.Register
     Hs.Main.Build.Render
     Hs.Streaming
     Prelude

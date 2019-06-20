@@ -1,5 +1,1 @@
 packages: .
-
-jobs: $ncpus
-
-optimization: False

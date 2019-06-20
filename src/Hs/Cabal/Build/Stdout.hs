@@ -8,10 +8,12 @@ import Hs.Cabal.Package
 
 import Data.Char (isSpace)
 import Prelude hiding (some)
-import Text.Megaparsec
+import Streaming
+import Text.Megaparsec hiding (Stream)
 import Text.Megaparsec.Char
 
 import qualified Data.Text as Text
+import qualified Streaming.Prelude as Streaming
 
 
 data CabalBuildStdout
@@ -38,6 +40,19 @@ data CabalBuildStdout
 parseCabalBuildStdout :: Text -> Maybe CabalBuildStdout
 parseCabalBuildStdout =
   parseMaybe parser
+
+cabalBuildStdoutStream
+  :: Monad m
+  => Stream (Of Text) m r
+  -> Stream (Of (Either Text CabalBuildStdout)) m r
+cabalBuildStdoutStream stream =
+  lift (Streaming.next stream) >>= \case
+    Left r ->
+      pure r
+
+    Right (s, stream') -> do
+      Streaming.yield (maybe (Left s) Right (parseCabalBuildStdout s))
+      cabalBuildStdoutStream stream'
 
 parser :: Parsec () Text CabalBuildStdout
 parser =
