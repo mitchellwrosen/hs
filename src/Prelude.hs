@@ -13,4 +13,6 @@ import Data.Kind              as X (Type)
 import Data.Maybe             as X
 import Data.Text              as X (Text)
 import Data.Word              as X
+import GHC.Clock              as X (getMonotonicTimeNSec)
 import GHC.Generics           as X (Generic)
+import System.Exit            as X (ExitCode)

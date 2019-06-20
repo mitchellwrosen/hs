@@ -2,8 +2,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Hs.Main.Build.Render
-  ( RenderEff
-  , runRender
+  ( RenderEffect
   , renderBuildingComponent
   , renderBuildingDependency
   , renderCompilingModule
@@ -12,6 +11,8 @@ module Hs.Main.Build.Render
   , renderDownloadingDependency
   , renderPreprocessingComponent
   , renderStderr
+  , RenderCarrier
+  , runRender
   ) where
 
 import Hs.Cabal.Component (Component(..))
@@ -39,17 +40,17 @@ import qualified Data.Text as Text
 type Dependency
   = Either Package Component
 
-data RenderEff (m :: Type -> Type) (k :: Type) where
+data RenderEffect (m :: Type -> Type) (k :: Type) where
   RenderBuildingComponent
     :: Component
     -> k
-    -> RenderEff m k
+    -> RenderEffect m k
 
   RenderBuildingDependency
     :: Dependency
     -> Word64
     -> k
-    -> RenderEff m k
+    -> RenderEffect m k
 
   RenderCompilingModule
     :: Int
@@ -57,40 +58,40 @@ data RenderEff (m :: Type -> Type) (k :: Type) where
     -> Text
     -> Bool
     -> k
-    -> RenderEff m k
+    -> RenderEffect m k
 
   RenderCompletedDependency
     :: Dependency
     -> Word64
     -> k
-    -> RenderEff m k
+    -> RenderEffect m k
 
   RenderConfiguringComponent
     :: Component
     -> k
-    -> RenderEff m k
+    -> RenderEffect m k
 
   RenderDownloadingDependency
     :: Dependency
     -> k
-    -> RenderEff m k
+    -> RenderEffect m k
 
   RenderPreprocessingComponent
     :: Component
     -> k
-    -> RenderEff m k
+    -> RenderEffect m k
 
   RenderStderr
     :: Text
     -> k
-    -> RenderEff m k
+    -> RenderEffect m k
 
   deriving stock (Functor)
   deriving anyclass (HFunctor)
 
 renderBuildingComponent ::
      ( Carrier sig m
-     , Member RenderEff sig
+     , Member RenderEffect sig
      )
   => Component
   -> m ()
@@ -99,7 +100,7 @@ renderBuildingComponent component =
 
 renderBuildingDependency ::
      ( Carrier sig m
-     , Member RenderEff sig
+     , Member RenderEffect sig
      )
   => Dependency
   -> Word64
@@ -109,7 +110,7 @@ renderBuildingDependency dep time =
 
 renderCompilingModule ::
      ( Carrier sig m
-     , Member RenderEff sig
+     , Member RenderEffect sig
      )
   => Int
   -> Int
@@ -121,7 +122,7 @@ renderCompilingModule n m name isBoot =
 
 renderCompletedDependency ::
      ( Carrier sig m
-     , Member RenderEff sig
+     , Member RenderEffect sig
      )
   => Dependency
   -> Word64
@@ -131,7 +132,7 @@ renderCompletedDependency dep time =
 
 renderConfiguringComponent ::
      ( Carrier sig m
-     , Member RenderEff sig
+     , Member RenderEffect sig
      )
   => Component
   -> m ()
@@ -140,7 +141,7 @@ renderConfiguringComponent component =
 
 renderDownloadingDependency ::
      ( Carrier sig m
-     , Member RenderEff sig
+     , Member RenderEffect sig
      )
   => Dependency
   -> m ()
@@ -149,7 +150,7 @@ renderDownloadingDependency dep =
 
 renderPreprocessingComponent ::
      ( Carrier sig m
-     , Member RenderEff sig
+     , Member RenderEffect sig
      )
   => Component
   -> m ()
@@ -158,7 +159,7 @@ renderPreprocessingComponent component =
 
 renderStderr ::
      ( Carrier sig m
-     , Member RenderEff sig
+     , Member RenderEffect sig
      )
   => Text
   -> m ()
@@ -179,9 +180,9 @@ newtype RenderCarrier m a
   } deriving newtype (Applicative, Functor, Monad, MonadIO)
 
 instance (Carrier sig m, Effect sig, LiftRegion m, MonadIO m)
-      => Carrier (RenderEff :+: sig) (RenderCarrier m) where
+      => Carrier (RenderEffect :+: sig) (RenderCarrier m) where
   eff ::
-       (RenderEff :+: sig) (RenderCarrier m) (RenderCarrier m a)
+       (RenderEffect :+: sig) (RenderCarrier m) (RenderCarrier m a)
     -> RenderCarrier m a
   eff = \case
     L (RenderBuildingComponent _component next) ->

@@ -10,7 +10,6 @@ import Hs.Streaming
 
 import Control.Effect
 import Streaming
-import System.Exit
 import System.Process.Typed
 
 import qualified Streaming.Prelude as Streaming
