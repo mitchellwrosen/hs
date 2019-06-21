@@ -99,8 +99,10 @@ library
 
   build-depends:
     ansi-terminal,
+    bytestring,
     concurrent-output,
     containers,
+    directory,
     fused-effects,
     hashable,
     managed,
@@ -118,17 +120,21 @@ library
     unordered-containers,
 
   exposed-modules:
+    Hs.Cabal
     Hs.Cabal.Build.Spec
     Hs.Cabal.Build.Stderr
     Hs.Cabal.Build.Stdout
     Hs.Cabal.Component
     Hs.Cabal.Package
     Hs.Eff.Register
+    Hs.Hlint
     Hs.Main
     Hs.Main.Build
     Hs.Main.Build.Render
     Hs.Main.Build.Spec
     Hs.Main.Dev
+    Hs.Main.Lint
+    Hs.Main.Refactor
     Hs.Streaming
     Prelude
 

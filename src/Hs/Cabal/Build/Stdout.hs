@@ -138,11 +138,8 @@ componentParser =
   asum
     [ do
         _ <- string "executable '"
-        exeName <- takeWhile1P Nothing (not . (== '\''))
-        _ <- string "' for "
-        rest <- takeRest
-        setInput (Text.dropEnd 2 rest)
-        package <- packageParser
+        exeName <- takeWhile1P Nothing (/= '\'')
+        package <- forPackageParser
         pure (Executable package exeName)
 
     , do
@@ -150,7 +147,7 @@ componentParser =
 
         name <-
           optional $
-            singleQuotes (takeWhile1P Nothing (not . (== '\''))) <* space
+            singleQuotes (takeWhile1P Nothing (/= '\'')) <* space
 
         string "for" *> space
         rest <- takeRest
@@ -161,13 +158,18 @@ componentParser =
     , do
         string "test suite" *> space
         _ <- char '\''
-        exeName <- takeWhile1P Nothing (not . (== '\''))
-        _ <- string "' for "
-        rest <- takeRest
-        setInput (Text.dropEnd 2 rest)
-        package <- packageParser
+        exeName <- takeWhile1P Nothing (/= '\'')
+        package <- forPackageParser
         pure (TestSuite package exeName)
     ]
+
+  where
+    forPackageParser :: Parsec () Text Package
+    forPackageParser = do
+      _ <- string "' for "
+      rest <- takeRest
+      setInput (Text.dropEnd 2 rest)
+      packageParser
 
 depComponentParser :: Parsec () Text (Either Package Component)
 depComponentParser = do
@@ -176,12 +178,12 @@ depComponentParser = do
   asum
     [ Right (Library package name) <$ try (parens (string "lib"))
 
-    , Right . Executable package <$> do
+    , Right . Executable package <$>
         try
           (parens
             (do
               _ <- string "exe:"
-              takeWhile1P Nothing (not . (== ')'))))
+              takeWhile1P Nothing (/= ')')))
 
     , Left package <$
         asum

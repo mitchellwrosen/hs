@@ -27,7 +27,7 @@ handleToLines
 handleToLines handle =
   loop
   where
-    loop = do
+    loop =
       liftIO (hIsEOF handle) >>= \case
         False -> do
           line <- liftIO (Text.hGetLine handle)

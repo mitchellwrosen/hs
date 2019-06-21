@@ -86,8 +86,8 @@ handleUnknownStderr
      )
   => Text
   -> m ()
-handleUnknownStderr line =
-  renderStderr line
+handleUnknownStderr =
+  renderStderr
 
 handleStderr
   :: MonadIO m

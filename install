@@ -2,12 +2,18 @@
 
 set -e
 
-(cabal --numeric-version | grep 2.4.1.0 >/dev/null) || \
-  (cabal --numeric-version | grep 3.0.0.0 >/dev/null) || \
+(cabal --numeric-version | grep '^2.4.1.0$' >/dev/null) || \
+  (cabal --numeric-version | grep '^3.0.0.0$' >/dev/null) || \
     (echo "cabal version (2.4.1.0 | 3.0.0.0) not found" && exit 1)
 
-(cabal-plan --version | grep 0.5.0.0 >/dev/null) || \
+(cabal-plan --version | grep '^cabal-plan 0.5.0.0$' >/dev/null) || \
   (echo "cabal-plan version 0.5.0.0 not found" && exit 1)
+
+(hlint --version | grep '^HLint v2.1.24, (C) Neil Mitchell 2006-2019$' >/dev/null) || \
+  (echo "hlint version 2.1.24 not found" && exit 1)
+
+(refactor --version | grep '^v0.6.0.0$' >/dev/null) || \
+  (echo "refactor version 0.6.0.0 not found" && exit 1)
 
 cabal v2-build
 cp $(cabal-plan list-bin hs:exe:hs) ~/.local/bin

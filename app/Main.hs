@@ -42,8 +42,10 @@ parser =
     (fold
       [ command "build" (info buildParser (progDesc "Build"))
       , command "clean" (info cleanParser (progDesc "Clean"))
-      , command "dev" (info devParser (progDesc "Develop"))
       , command "depgraph" (info depgraphParser (progDesc "Dependency graph"))
+      , command "dev" (info devParser (progDesc "Develop"))
+      , command "lint" (info lintParser (progDesc "Lint"))
+      , command "refactor" (info refactorParser (progDesc "Refactor"))
       ])
 
 buildParser :: Parser (IO ())
@@ -84,3 +86,11 @@ depgraphParser =
 devParser :: Parser (IO ())
 devParser =
   pure Main.dev
+
+lintParser :: Parser (IO ())
+lintParser =
+  pure Main.lint
+
+refactorParser :: Parser (IO ())
+refactorParser =
+  pure Main.refactor

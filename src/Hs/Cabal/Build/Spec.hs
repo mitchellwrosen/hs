@@ -15,7 +15,7 @@ import System.Process.Typed
 import qualified Streaming.Prelude as Streaming
 
 
-data CabalBuildSpec
+newtype CabalBuildSpec
   = CabalBuildSpec
   { optimize :: Bool
   }

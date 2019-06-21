@@ -9,7 +9,7 @@ import Hs.Cabal.Build.Spec
 import Options.Applicative
 
 
-data BuildSpec
+newtype BuildSpec
   = BuildSpec
   { optimize :: Bool
   }
