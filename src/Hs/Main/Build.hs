@@ -1,7 +1,7 @@
 -- | hs build
 
 module Hs.Main.Build
-  ( buildParser
+  ( build
   ) where
 
 import Hs.Eff.Register
@@ -12,16 +12,11 @@ import Hs.Cabal.Build.Stdout
 import Hs.Cabal.Build.Stderr
 
 import Control.Effect
-import Options.Applicative
 import Streaming
 import System.Console.Concurrent
 
 import qualified Streaming.Prelude as Streaming
 
-
-buildParser :: Parser (IO ())
-buildParser =
-  build <$> buildSpecParser
 
 build :: BuildSpec -> IO ()
 build buildSpec = do

@@ -1,5 +1,13 @@
 #!/bin/sh
 
 set -e
+
+(cabal --numeric-version | grep 2.4.1.0 >/dev/null) || \
+  (cabal --numeric-version | grep 3.0.0.0 >/dev/null) || \
+    (echo "cabal version (2.4.1.0 | 3.0.0.0) not found" && exit 1)
+
+(cabal-plan --version | grep 0.5.0.0 >/dev/null) || \
+  (echo "cabal-plan version 0.5.0.0 not found" && exit 1)
+
 cabal v2-build
 cp $(cabal-plan list-bin hs:exe:hs) ~/.local/bin

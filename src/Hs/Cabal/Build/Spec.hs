@@ -56,6 +56,38 @@ renderCabalBuildSpec (CabalBuildSpec optimize) =
     , "--enable-benchmarks"
     , "--enable-tests"
     , "--jobs"
-    , "--ghc-options=-j"
+    , "\"--ghc-options=" ++ unwords ghcOptions ++ "\""
     , "-O" ++ (if optimize then "1" else "0")
     ]
+
+  where
+    ghcOptions :: [String]
+    ghcOptions =
+      [ "-fdiagnostics-color=always"
+      , "-fprint-expanded-synonyms"
+      , "-fprint-explicit-foralls"
+      , "-fprint-explicit-kinds"
+      , "-fprint-unicode-syntax"
+      , "-j"
+      , "-Wall"
+      , "-Wcompat"
+      , "-Werror=empty-enumerations"
+      , "-Werror=inaccessible-code"
+      , "-Werror=incomplete-patterns"
+      , "-Werror=incomplete-uni-patterns"
+      , "-Werror=missing-fields"
+      , "-Werror=missing-methods"
+      , "-Werror=overflowed-literals"
+      , "-Werror=overlapping-patterns"
+      , "-Werror=partial-fields"
+      , "-Werror=tabs"
+      , "-Widentities"
+      , "-Wincomplete-record-updates"
+      , "-Wincomplete-patterns"
+      , "-Wincomplete-uni-patterns"
+      , "-Wmissing-local-signatures"
+      , "-Wnoncanonical-monad-instances"
+      , "-Wnoncanonical-monadfail-instances"
+      , "-Wpartial-fields"
+      , "-Wredundant-constraints"
+      ]

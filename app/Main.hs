@@ -1,6 +1,6 @@
 module Main where
 
-import Hs.Main.Build (buildParser)
+import qualified Hs.Main as Main
 
 import Control.Monad.Managed
 import Options.Applicative
@@ -42,9 +42,13 @@ parser =
     (fold
       [ command "build" (info buildParser (progDesc "Build"))
       , command "clean" (info cleanParser (progDesc "Clean"))
-      , command "dependency-graph"
-          (info dependencyGraphParser (progDesc "Dependency graph"))
+      , command "dev" (info devParser (progDesc "Develop"))
+      , command "depgraph" (info depgraphParser (progDesc "Dependency graph"))
       ])
+
+buildParser :: Parser (IO ())
+buildParser =
+  Main.build <$> Main.buildSpecParser
 
 cleanParser :: Parser (IO ())
 cleanParser =
@@ -54,8 +58,8 @@ cleanParser =
 
     checkExitCode process
 
-dependencyGraphParser :: Parser (IO ())
-dependencyGraphParser =
+depgraphParser :: Parser (IO ())
+depgraphParser =
   pure . runManaged $ do
     cabalPlanDotProcess :: Process () Handle () <-
       managed
@@ -64,7 +68,7 @@ dependencyGraphParser =
             & setStdout createPipe))
 
     outfile :: FilePath <-
-      liftIO (emptySystemTempFile "dependency-graph.pdf")
+      liftIO (emptySystemTempFile "depgraph.pdf")
 
     dotProcess :: Process () () () <-
       managed
@@ -76,3 +80,7 @@ dependencyGraphParser =
     checkExitCode dotProcess
 
     liftIO (putStrLn outfile)
+
+devParser :: Parser (IO ())
+devParser =
+  pure Main.dev
