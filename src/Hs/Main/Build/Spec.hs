@@ -1,10 +1,7 @@
 module Hs.Main.Build.Spec
   ( BuildSpec(..)
   , buildSpecParser
-  , buildSpecToCabalBuildSpec
   ) where
-
-import Hs.Cabal.Build.Spec
 
 import Options.Applicative
 
@@ -12,16 +9,10 @@ import Options.Applicative
 newtype BuildSpec
   = BuildSpec
   { optimize :: Bool
-  }
+  } deriving stock (Generic)
 
 buildSpecParser :: Parser BuildSpec
 buildSpecParser =
   pure BuildSpec
     { optimize = False
-    }
-
-buildSpecToCabalBuildSpec :: BuildSpec -> CabalBuildSpec
-buildSpecToCabalBuildSpec (BuildSpec optimize) =
-  CabalBuildSpec
-    { optimize = optimize
     }

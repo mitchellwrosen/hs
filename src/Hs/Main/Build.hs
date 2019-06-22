@@ -7,6 +7,7 @@ module Hs.Main.Build
 import Hs.Eff.Register
 import Hs.Main.Build.Render
 import Hs.Main.Build.Spec
+import Hs.Cabal (cabalProjectLocalFile, getCurrentPackageName)
 import Hs.Cabal.Build.Spec
 import Hs.Cabal.Build.Stdout
 import Hs.Cabal.Build.Stderr
@@ -14,22 +15,120 @@ import Hs.Cabal.Build.Stderr
 import Control.Effect
 import Streaming
 import System.Console.Concurrent
+import System.Directory (removeFile)
+import System.Exit
+import UnliftIO.Exception (bracket_)
 
+import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
 import qualified Streaming.Prelude as Streaming
 
 
 build :: BuildSpec -> IO ()
 build buildSpec = do
+  getCurrentPackageName >>= \case
+    Nothing -> do
+      doBuild
+        CabalBuildSpec
+          { ghcOptions = map Text.unpack depsGhcOptions
+          , onlyDependencies = True
+          , optimize = True
+          , target = "all"
+          }
+
+      doBuild
+        CabalBuildSpec
+          { ghcOptions = map Text.unpack depsGhcOptions
+          , onlyDependencies = False
+          , optimize = False
+          , target = "all"
+          }
+
+    Just package -> do
+      bracket_
+        (Text.writeFile
+          cabalProjectLocalFile
+          (Text.unlines
+            [ "package *"
+            , "  ghc-options: " <> Text.unwords depsGhcOptions
+            ]))
+        (removeFile cabalProjectLocalFile)
+        (doBuild
+          CabalBuildSpec
+            { ghcOptions = []
+            , onlyDependencies = True
+            , optimize = True
+            , target = package
+            })
+
+      bracket_
+        (Text.writeFile
+          cabalProjectLocalFile
+          (Text.unlines
+            [ "package *"
+            , "  ghc-options: " <> Text.unwords depsGhcOptions
+            , "package " <> Text.pack package
+            , "  ghc-options: " <>
+                Text.unwords (depsGhcOptions ++ localsGhcOptions)
+            ]))
+        (removeFile cabalProjectLocalFile)
+        (doBuild
+          CabalBuildSpec
+            { ghcOptions = []
+            , onlyDependencies = False
+            , optimize = False
+            , target = package
+            })
+
+  where
+    depsGhcOptions :: [Text]
+    depsGhcOptions =
+      [ "-fdiagnostics-color=always"
+      , "-fprint-expanded-synonyms"
+      , "-fprint-explicit-foralls"
+      , "-fprint-explicit-kinds"
+      , "-fprint-unicode-syntax"
+      , "-j"
+      , "-Wall"
+      , "-Wcompat"
+      , "-Widentities"
+      , "-Wincomplete-record-updates"
+      , "-Wincomplete-patterns"
+      , "-Wincomplete-uni-patterns"
+      , "-Wmissing-local-signatures"
+      , "-Wnoncanonical-monad-instances"
+      , "-Wnoncanonical-monadfail-instances"
+      , "-Wpartial-fields"
+      , "-Wredundant-constraints"
+      ]
+
+    localsGhcOptions :: [Text]
+    localsGhcOptions =
+      [ "-Werror=empty-enumerations"
+      , "-Werror=inaccessible-code"
+      , "-Werror=incomplete-patterns"
+      , "-Werror=incomplete-uni-patterns"
+      , "-Werror=missing-fields"
+      , "-Werror=missing-methods"
+      , "-Werror=overflowed-literals"
+      , "-Werror=overlapping-patterns"
+      , "-Werror=partial-fields"
+      , "-Werror=tabs"
+      ]
+
+
+doBuild :: CabalBuildSpec -> IO ()
+doBuild spec = do
   exitCode :: ExitCode <-
-    buildSpec
-      & buildSpecToCabalBuildSpec
+    spec
       & spawnCabalBuildProcess
       & handleCabalOutput
       & runRender
       & runRegister
       & runM
 
-  pure ()
+  when (exitCode /= ExitSuccess)
+    (exitWith exitCode)
 
   {-
   output <- readProcessStdout_ (shell "cabal-plan list-bins")

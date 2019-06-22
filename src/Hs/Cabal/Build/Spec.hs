@@ -15,10 +15,13 @@ import System.Process.Typed
 import qualified Streaming.Prelude as Streaming
 
 
-newtype CabalBuildSpec
+data CabalBuildSpec
   = CabalBuildSpec
-  { optimize :: Bool
-  }
+  { ghcOptions :: [[Char]]
+  , onlyDependencies :: Bool
+  , optimize :: Bool
+  , target :: [Char]
+  } deriving stock (Generic)
 
 spawnCabalBuildProcess
   :: ( Carrier sig m
@@ -48,46 +51,19 @@ spawnCabalBuildProcess spec =
       maybe (Left s) Right (parseCabalBuildStdout s)
 
 renderCabalBuildSpec :: CabalBuildSpec -> [Char]
-renderCabalBuildSpec (CabalBuildSpec optimize) =
-  unwords
-    [ "cabal"
-    , "v2-build"
-    , "all"
-    , "--enable-benchmarks"
-    , "--enable-tests"
-    , "--jobs"
-    , "\"--ghc-options=" ++ unwords ghcOptions ++ "\""
-    , "-O" ++ (if optimize then "1" else "0")
+renderCabalBuildSpec spec =
+  unwords . catMaybes $
+    [ Just "cabal"
+    , Just "v2-build"
+    , Just (spec ^. #target)
+    , Just "--enable-benchmarks"
+    , Just "--enable-tests"
+    , Just "--jobs"
+    , do
+        guard (not (null (spec ^. #ghcOptions)))
+        Just ("\"--ghc-options=" ++ unwords (spec ^. #ghcOptions) ++ "\"")
+    , do
+        guard (spec ^. #onlyDependencies)
+        Just "--only-dependencies"
+    , Just ("-O" ++ (if spec ^. #optimize then "1" else "0"))
     ]
-
-  where
-    ghcOptions :: [String]
-    ghcOptions =
-      [ "-fdiagnostics-color=always"
-      , "-fprint-expanded-synonyms"
-      , "-fprint-explicit-foralls"
-      , "-fprint-explicit-kinds"
-      , "-fprint-unicode-syntax"
-      , "-j"
-      , "-Wall"
-      , "-Wcompat"
-      , "-Werror=empty-enumerations"
-      , "-Werror=inaccessible-code"
-      , "-Werror=incomplete-patterns"
-      , "-Werror=incomplete-uni-patterns"
-      , "-Werror=missing-fields"
-      , "-Werror=missing-methods"
-      , "-Werror=overflowed-literals"
-      , "-Werror=overlapping-patterns"
-      , "-Werror=partial-fields"
-      , "-Werror=tabs"
-      , "-Widentities"
-      , "-Wincomplete-record-updates"
-      , "-Wincomplete-patterns"
-      , "-Wincomplete-uni-patterns"
-      , "-Wmissing-local-signatures"
-      , "-Wnoncanonical-monad-instances"
-      , "-Wnoncanonical-monadfail-instances"
-      , "-Wpartial-fields"
-      , "-Wredundant-constraints"
-      ]

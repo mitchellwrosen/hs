@@ -5,6 +5,6 @@ case "$1" in
     exec ghcid -c "cabal v2-repl hs:exe:hs" --restart hs.cabal
     ;;
   "lib")
-    exec ghcid -c "cabal v2-repl hs:lib:hs" --restart hs.cabal
+    exec ghcid -c "cabal v2-repl hs:lib:hs-internal" --restart hs.cabal
     ;;
 esac

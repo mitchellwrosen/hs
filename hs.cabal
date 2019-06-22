@@ -94,18 +94,21 @@ common common
     base hiding (Prelude),
     base (Prelude as BasePrelude)
 
-library
+library hs-internal
   import:
     common
 
   build-depends:
     ansi-terminal,
     bytestring,
+    Cabal,
     concurrent-output,
     containers,
     directory,
     fused-effects,
     hashable,
+    generic-lens,
+    lens,
     managed,
     megaparsec,
     optparse-applicative,
@@ -157,7 +160,7 @@ executable hs
     async,
     concurrent-output,
     fused-effects,
-    hs,
+    hs-internal,
     managed,
     optparse-applicative,
     stm,
