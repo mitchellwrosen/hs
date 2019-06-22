@@ -98,4 +98,5 @@ lintParser =
 
 refactorParser :: Parser (IO ())
 refactorParser =
-  pure Main.refactor
+  Main.refactor
+    <$> switch (long "auto" <> help "Automatically apply refactorings")
