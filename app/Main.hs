@@ -41,7 +41,6 @@ parser =
   hsubparser
     (fold
       [ command "build" (info buildParser (progDesc "Build"))
-      , command "clean" (info cleanParser (progDesc "Clean"))
       , command "depgraph" (info depgraphParser (progDesc "Dependency graph"))
       , command "dev" (info devParser (progDesc "Develop"))
       , command "format" (info formatParser (progDesc "Format"))
@@ -54,14 +53,6 @@ parser =
 buildParser :: Parser (IO ())
 buildParser =
   Main.build <$> Main.buildSpecParser
-
-cleanParser :: Parser (IO ())
-cleanParser =
-  pure . runManaged $ do
-    process :: Process () () () <-
-      managed (withProcess (shell "cabal v2-clean"))
-
-    checkExitCode process
 
 depgraphParser :: Parser (IO ())
 depgraphParser =

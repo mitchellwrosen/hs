@@ -17,6 +17,7 @@ import Streaming
 import System.Console.Concurrent
 import System.Directory (removeFile)
 import System.Exit
+import System.Process.Typed
 import UnliftIO.Exception (bracket_)
 
 import qualified Data.Text as Text
@@ -26,6 +27,13 @@ import qualified Streaming.Prelude as Streaming
 
 build :: BuildSpec -> IO ()
 build buildSpec = do
+  when (buildSpec ^. #clean) do
+    exitCode :: ExitCode <-
+      runProcess (shell "cabal v2-clean")
+
+    when (exitCode /= ExitSuccess)
+      (exitWith exitCode)
+
   getCurrentPackageName >>= \case
     Nothing -> do
       doBuild
@@ -76,7 +84,7 @@ build buildSpec = do
           CabalBuildSpec
             { ghcOptions = []
             , onlyDependencies = False
-            , optimize = False
+            , optimize = buildSpec ^. #optimize
             , target = package
             })
 

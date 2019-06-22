@@ -6,13 +6,14 @@ module Hs.Main.Build.Spec
 import Options.Applicative
 
 
-newtype BuildSpec
+data BuildSpec
   = BuildSpec
-  { optimize :: Bool
+  { clean :: Bool
+  , optimize :: Bool
   } deriving stock (Generic)
 
 buildSpecParser :: Parser BuildSpec
 buildSpecParser =
-  pure BuildSpec
-    { optimize = False
-    }
+  BuildSpec
+    <$> switch (long "clean" <> help "Remove artifacts before building")
+    <*> switch (long "optimize" <> help "Turn on optimizations")
