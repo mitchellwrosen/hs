@@ -85,7 +85,7 @@ build buildSpec = do
             { ghcOptions = []
             , onlyDependencies = False
             , optimize = buildSpec ^. #optimize
-            , target = package
+            , target = "all"
             })
 
   where
