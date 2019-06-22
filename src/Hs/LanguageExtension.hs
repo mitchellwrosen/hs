@@ -1,0 +1,43 @@
+module Hs.LanguageExtension
+  ( defaultLanguageExtensions
+  ) where
+
+defaultLanguageExtensions :: [[Char]]
+defaultLanguageExtensions =
+  [ "-XBangPatterns"
+  , "-XBlockArguments"
+  , "-XConstraintKinds"
+  , "-XDataKinds"
+  , "-XDefaultSignatures"
+  , "-XDeriveAnyClass"
+  , "-XDeriveFunctor"
+  , "-XDeriveGeneric"
+  , "-XDerivingStrategies"
+  , "-XDuplicateRecordFields"
+  , "-XExistentialQuantification"
+  , "-XFlexibleContexts"
+  , "-XFlexibleInstances"
+  , "-XGADTs"
+  , "-XGeneralizedNewtypeDeriving"
+  , "-XInstanceSigs"
+  , "-XKindSignatures"
+  , "-XLambdaCase"
+  , "-XMagicHash"
+  , "-XMultiParamTypeClasses"
+  , "-XNamedFieldPuns"
+  , "-XOverloadedLabels"
+  , "-XOverloadedStrings"
+  , "-XPatternSynonyms"
+  , "-XRankNTypes"
+  , "-XRecordWildCards"
+  , "-XRecursiveDo"
+  , "-XScopedTypeVariables"
+  , "-XStandaloneDeriving"
+  , "-XStrictData"
+  , "-XTupleSections"
+  , "-XTypeApplications"
+  , "-XTypeFamilies"
+  , "-XTypeOperators"
+  , "-XUnicodeSyntax"
+  , "-XViewPatterns"
+  ]

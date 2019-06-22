@@ -12,6 +12,9 @@ set -e
 (hlint --version | grep '^HLint v2.1.24, (C) Neil Mitchell 2006-2019$' >/dev/null) || \
   (echo "hlint version 2.1.24 not found" && exit 1)
 
+(ormolu --version | grep '^ormolu 0.0.1.0 master 4a0e5d4e422665dfd207451321f748e7b5dbb8d1$' >/dev/null) || \
+  (echo "ormolu version 0.0.1.0 master 4a0e5d4e422665dfd207451321f748e7b5dbb8d1 not found" && exit 1)
+
 (refactor --version | grep '^v0.6.0.0$' >/dev/null) || \
   (echo "refactor version 0.6.0.0 not found" && exit 1)
 

@@ -44,6 +44,7 @@ parser =
       , command "clean" (info cleanParser (progDesc "Clean"))
       , command "depgraph" (info depgraphParser (progDesc "Dependency graph"))
       , command "dev" (info devParser (progDesc "Develop"))
+      , command "format" (info formatParser (progDesc "Format"))
       , command "lint" (info lintParser (progDesc "Lint"))
       , command "refactor" (info refactorParser (progDesc "Refactor"))
       ])
@@ -86,6 +87,10 @@ depgraphParser =
 devParser :: Parser (IO ())
 devParser =
   pure Main.dev
+
+formatParser :: Parser (IO ())
+formatParser =
+  pure Main.format
 
 lintParser :: Parser (IO ())
 lintParser =

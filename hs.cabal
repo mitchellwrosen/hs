@@ -34,6 +34,7 @@ common common
 
   default-extensions:
     BangPatterns
+    BlockArguments
     ConstraintKinds
     DataKinds
     DefaultSignatures
@@ -109,6 +110,7 @@ library
     megaparsec,
     optparse-applicative,
     resourcet,
+    say,
     stm,
     stm-chans,
     streaming,
@@ -127,12 +129,15 @@ library
     Hs.Cabal.Component
     Hs.Cabal.Package
     Hs.Eff.Register
+    Hs.Git.LsFiles
     Hs.Hlint
+    Hs.LanguageExtension
     Hs.Main
     Hs.Main.Build
     Hs.Main.Build.Render
     Hs.Main.Build.Spec
     Hs.Main.Dev
+    Hs.Main.Format
     Hs.Main.Lint
     Hs.Main.Refactor
     Hs.Streaming
@@ -160,7 +165,6 @@ executable hs
     temporary,
     text,
     typed-process,
-    -- unix,
 
   ghc-options:
     -threaded "-with-rtsopts=-N"
