@@ -46,6 +46,8 @@ parser =
       , command "dev" (info devParser (progDesc "Develop"))
       , command "format" (info formatParser (progDesc "Format"))
       , command "lint" (info lintParser (progDesc "Lint"))
+      , command "outdated"
+          (info outdatedParser (progDesc "Print outdated dependencies"))
       , command "refactor" (info refactorParser (progDesc "Refactor"))
       ])
 
@@ -95,6 +97,10 @@ formatParser =
 lintParser :: Parser (IO ())
 lintParser =
   pure Main.lint
+
+outdatedParser :: Parser (IO ())
+outdatedParser =
+  pure Main.outdated
 
 refactorParser :: Parser (IO ())
 refactorParser =

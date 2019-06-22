@@ -139,6 +139,7 @@ library
     Hs.Main.Dev
     Hs.Main.Format
     Hs.Main.Lint
+    Hs.Main.Outdated
     Hs.Main.Refactor
     Hs.Streaming
     Prelude
