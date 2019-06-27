@@ -157,17 +157,13 @@ executable hs
     common,
 
   build-depends:
-    async,
     concurrent-output,
     fused-effects,
+    ghc-paths,
     hs-internal,
     managed,
     optparse-applicative,
-    stm,
-    stm-chans,
-    streaming,
     temporary,
-    text,
     typed-process,
 
   ghc-options:

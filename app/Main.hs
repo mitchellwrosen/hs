@@ -9,6 +9,8 @@ import System.IO
 import System.IO.Temp (emptySystemTempFile)
 import System.Process.Typed
 
+import qualified GHC.Paths
+
 
 main :: IO ()
 main =
@@ -47,6 +49,7 @@ parser =
       , command "lint" (info lintParser (progDesc "Lint"))
       , command "outdated"
           (info outdatedParser (progDesc "Print outdated dependencies"))
+      , command "paths" (info pathsParser (progDesc "Print paths"))
       , command "refactor" (info refactorParser (progDesc "Refactor"))
       ])
 
@@ -59,7 +62,7 @@ depgraphParser =
   pure . runManaged $ do
     cabalPlanDotProcess :: Process () Handle () <-
       managed
-        (withProcess
+        (withProcessWait
           (shell "cabal-plan dot --tred --tred-weights"
             & setStdout createPipe))
 
@@ -68,7 +71,7 @@ depgraphParser =
 
     dotProcess :: Process () () () <-
       managed
-        (withProcess
+        (withProcessWait
           (shell ("dot -Tpdf -o " ++ outfile)
             & setStdin (useHandleClose (getStdout cabalPlanDotProcess))))
 
@@ -92,6 +95,14 @@ lintParser =
 outdatedParser :: Parser (IO ())
 outdatedParser =
   pure Main.outdated
+
+pathsParser :: Parser (IO ())
+pathsParser =
+  pure do
+    putStrLn ("ghc = " ++ GHC.Paths.ghc)
+    putStrLn ("ghc_pkg = " ++ GHC.Paths.ghc_pkg)
+    putStrLn ("libdir = " ++ GHC.Paths.libdir)
+    putStrLn ("docdir = " ++ GHC.Paths.docdir)
 
 refactorParser :: Parser (IO ())
 refactorParser =
