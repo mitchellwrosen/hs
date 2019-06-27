@@ -24,6 +24,7 @@ defaultLanguageExtensions =
   , "-XLambdaCase"
   , "-XMagicHash"
   , "-XMultiParamTypeClasses"
+  , "-XMultiWayIf"
   , "-XNamedFieldPuns"
   , "-XOverloadedLabels"
   , "-XOverloadedStrings"
