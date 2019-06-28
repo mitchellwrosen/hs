@@ -52,6 +52,7 @@ parser =
           (info outdatedParser (progDesc "Print outdated dependencies"))
       , command "paths" (info pathsParser (progDesc "Print paths"))
       , command "refactor" (info refactorParser (progDesc "Refactor"))
+      , command "travis-ci" (info travisCiParser (progDesc "Generate .travis.yml"))
       ])
 
 buildParser :: Parser (IO ())
@@ -113,3 +114,7 @@ refactorParser :: Parser (IO ())
 refactorParser =
   Main.refactor
     <$> switch (long "auto" <> help "Automatically apply refactorings")
+
+travisCiParser :: Parser (IO ())
+travisCiParser =
+  pure Main.travisCi

@@ -146,6 +146,9 @@ library hs-internal
     Hs.Main.Lint
     Hs.Main.Outdated
     Hs.Main.Refactor
+    Hs.Main.TravisCi
+    Hs.Process
+    Hs.Shell.HaskellCi
     Hs.Streaming
     Prelude
 

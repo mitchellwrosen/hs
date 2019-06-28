@@ -7,6 +7,7 @@ module Hs.Main
   , lint
   , outdated
   , refactor
+  , travisCi
   ) where
 
 import Hs.Main.Build (build)
@@ -17,3 +18,4 @@ import Hs.Main.Lint (lint)
 import Hs.Main.Format (format)
 import Hs.Main.Outdated (outdated)
 import Hs.Main.Refactor (refactor)
+import Hs.Main.TravisCi (travisCi)

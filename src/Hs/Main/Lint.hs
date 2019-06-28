@@ -5,7 +5,6 @@ module Hs.Main.Lint
 import Hs.Hlint
 import Hs.LanguageExtension
 
-import System.Exit
 import System.Process.Typed
 
 

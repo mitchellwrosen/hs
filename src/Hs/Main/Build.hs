@@ -1,4 +1,4 @@
--- | hs build
+-- | @hs build@ command
 
 module Hs.Main.Build
   ( build
@@ -16,7 +16,6 @@ import Control.Effect
 import Streaming
 import System.Console.Concurrent
 import System.Directory (removeFile)
-import System.Exit
 import System.Process.Typed
 import UnliftIO.Exception (bracket_)
 

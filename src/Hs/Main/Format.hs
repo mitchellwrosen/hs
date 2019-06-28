@@ -1,3 +1,5 @@
+-- | @hs format@ command
+
 module Hs.Main.Format
   ( format
   ) where
@@ -6,7 +8,6 @@ import Hs.Git.LsFiles
 import Hs.LanguageExtension
 
 import Say
-import System.Exit
 import System.Process.Typed
 import UnliftIO.Async
 

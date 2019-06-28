@@ -1,6 +1,7 @@
 module Hs.Cabal
   ( cabalProjectLocalFile
   , getCurrentPackageName
+  , getCabalFile
   ) where
 
 import Data.List
@@ -37,3 +38,10 @@ getCabalFiles :: IO [FilePath]
 getCabalFiles = do
   files <- listDirectory "."
   pure (filter (".cabal" `isSuffixOf`) files)
+
+getCabalFile :: IO (Maybe FilePath)
+getCabalFile =
+  (\case
+    [file] -> Just file
+    _ -> Nothing)
+  <$> getCabalFiles

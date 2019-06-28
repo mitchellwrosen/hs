@@ -11,7 +11,6 @@ import Control.Effect
 import Control.Effect.Carrier
 import Control.Effect.Sum
 import Control.Concurrent.STM
-import Control.Monad.IO.Unlift
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Resource (runResourceT)
 import Control.Monad.Trans.Resource.Internal (ResourceT(..))
