@@ -3,6 +3,7 @@ module Hs.Main.Lint
   ) where
 
 import Hs.Hlint
+import Hs.LanguageExtension
 
 import System.Exit
 import System.Process.Typed
@@ -12,7 +13,16 @@ lint :: IO ()
 lint = do
   maybeCreateDefaultHlintConfig
 
-  runProcess (shell "hlint --git -j") >>= \case
+  let
+    args :: [String]
+    args =
+      [ "--git"
+      , "-j"
+      ]
+      ++
+      defaultLanguageExtensions
+
+  runProcess (proc "hlint" args) >>= \case
     ExitSuccess ->
       pure ()
 

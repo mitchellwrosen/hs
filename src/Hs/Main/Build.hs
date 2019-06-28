@@ -34,6 +34,15 @@ build buildSpec = do
     when (exitCode /= ExitSuccess)
       (exitWith exitCode)
 
+  doBuild
+    CabalBuildSpec
+      { ghcOptions = map Text.unpack depsGhcOptions
+      , onlyDependencies = True
+      , optimize = False
+      , target = "all"
+      }
+
+  {-
   getCurrentPackageName >>= \case
     Nothing -> do
       doBuild
@@ -87,6 +96,7 @@ build buildSpec = do
             , optimize = buildSpec ^. #optimize
             , target = "all"
             })
+  -}
 
   where
     depsGhcOptions :: [Text]

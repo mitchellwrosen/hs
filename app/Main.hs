@@ -43,6 +43,7 @@ parser =
   hsubparser
     (fold
       [ command "build" (info buildParser (progDesc "Build"))
+      , command "build-plan" (info buildPlanParser (progDesc "Bulid plan"))
       , command "depgraph" (info depgraphParser (progDesc "Dependency graph"))
       , command "dev" (info devParser (progDesc "Develop"))
       , command "format" (info formatParser (progDesc "Format"))
@@ -56,6 +57,10 @@ parser =
 buildParser :: Parser (IO ())
 buildParser =
   Main.build <$> Main.buildSpecParser
+
+buildPlanParser :: Parser (IO ())
+buildPlanParser =
+  pure Main.buildPlan
 
 depgraphParser :: Parser (IO ())
 depgraphParser =
